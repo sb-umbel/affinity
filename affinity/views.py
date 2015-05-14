@@ -22,9 +22,25 @@ def index(request):
 class BrandListView(APIView):
 
     def get(self, request):
-        brand_list = Brand.objects.order_by('created')
-        serializer = BrandSerializer(brand_list, many=True)
-        return Response(serializer.data)
+        try:
+            modified = Brand.objects.order_by('-modified').values_list('modified', flat=True)[0]
+        except IndexError:
+            return Response([])
+
+        key = 'brands.{}'.format(modified)
+
+        results = cache.get(key)
+
+        if results is None:
+            brand_list = Brand.objects.order_by('created')
+            serializer = BrandSerializer(brand_list, many=True)
+            results = serializer.data
+            logger.info('CACHE MISS: {}'.format(key))
+            cache.set(key, results)
+        else:
+            logger.info('CACHE HIT: {}'.format(key))
+
+        return Response(results)
 
     def post(self, request):
         serializer = BrandSerializer(data=request.data)

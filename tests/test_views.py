@@ -18,6 +18,19 @@ class BrandListViewTestCase(ViewTestCase):
         self.assertEqual(response.json[0]['name'], 'Apple')
         self.assertEqual(response.json[1]['name'], 'Microsoft')
 
+        response = self.app.get(resolve_url('brand_list'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json), 2)
+        self.assertEqual(response.json[0]['name'], 'Apple')
+        self.assertEqual(response.json[1]['name'], 'Microsoft')
+
+    def test_can_listing_no_brands(self):
+        response = self.app.get(resolve_url('brand_list'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json), 0)
+
     def test_can_create_new_brand(self):
         response = self.app.post(resolve_url('brand_list'), {
             'name': 'Apple',
@@ -26,6 +39,29 @@ class BrandListViewTestCase(ViewTestCase):
         self.assertEqual(response.status_code, 201)
         self.assertIsNotNone(response.json['id'])
         self.assertEqual(response.json['name'], 'Apple')
+
+    def test_busts_cache_when_brands_change(self):
+        Brand.objects.create(name='Apple')
+
+        response = self.app.get(resolve_url('brand_list'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json), 1)
+        self.assertEqual(response.json[0]['name'], 'Apple')
+
+        brand2 = Brand.objects.create(name='Microsoft')
+
+        response = self.app.get(resolve_url('brand_list'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json), 2)
+        self.assertEqual(response.json[1]['name'], 'Microsoft')
+
+        brand2.name = 'Windows'
+        brand2.save()
+
+        response = self.app.get(resolve_url('brand_list'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json), 2)
+        self.assertEqual(response.json[1]['name'], 'Windows')
 
 
 class BrandProfileListView(ViewTestCase):
