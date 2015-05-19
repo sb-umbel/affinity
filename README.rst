@@ -9,6 +9,10 @@ Create .env file::
 
     mv sample.env .env
 
+Run migrations::
+
+    python manage.py migrate
+
 
 Running Tests
 ==============
